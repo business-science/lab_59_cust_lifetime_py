@@ -1,0 +1,51 @@
+# In terminal, run: conda env create -f 01_environment.yml
+# To update, run: conda env update -f 01_environment.yml
+name: lab_59_cust_lifetime_py
+channels:
+  - anaconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7.1
+  - pip
+  - pip:
+      # Core Data
+      - numpy==1.20.2
+      - pandas==1.2.2
+      - plydata==0.4.3
+
+      # Visualization
+      - matplotlib==3.3.4
+      - plotnine==0.7.1
+      - mizani==0.7.2
+      - plotly==4.14.3
+
+      # Modeling & Machine Learning
+      - statsmodels
+      - scikit-learn==0.23.2
+      - xgboost==0.90
+      - sklearn-pandas==2.0.4
+      - scikit-misc==0.1.3
+
+      # API
+      - fastapi==0.63.0
+      - uvicorn==0.13.4
+
+      # Database
+      - sqlalchemy==1.4.7
+
+      # Jupyter
+      - jupyterlab==3.0.13
+      - jupyterlab-server==2.4.0
+      - jupyter-packaging==0.7.12
+      - jupyter-server==1.6.1 # Solves ImportError: cannot import name 'get_version_info' from 'jupyter_packaging'
+      - ipywidgets==7.6.3
+      - ipympl==0.7.0
+      - jupytext
+      - papermill==2.3.3
+      - nbconvert==5.6.1
+
+      # Apps
+      - streamlit==0.80.0
+      - dash==1.20.0
+
