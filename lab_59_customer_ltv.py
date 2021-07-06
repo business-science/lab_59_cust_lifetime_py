@@ -90,42 +90,18 @@ pn.ggplot(
 #  - What is the probability of a customer to make a purchase in next 90-days? (Classification)
 
 
-# 3.1 SPLITTING (2-Stages) ----
-
-# Stage 1: Random Splitting by Customer ID ----
-
-customer_ids = pd.Series(
-    cdnow_df['customer_id'].unique()
-)
-
-ids_train = customer_ids \
-    .sample(frac=0.8, random_state=123) \
-    .sort_values()
-ids_train
-
-split_1_train_df = cdnow_df \
-    [cdnow_df['customer_id'].isin(ids_train)]
-
-split_1_test_df = cdnow_df \
-    [~ cdnow_df['customer_id'].isin(ids_train)]
-
-# Stage 2: Time Splitting ----
+# 3.1 TIME SPLITTING (STAGE 1) ----
 
 n_days   = 90
-max_date = split_1_train_df['date'].max() 
+max_date = cdnow_df['date'].max() 
 cutoff   = max_date - pd.to_timedelta(n_days, unit = "d")
 
-split_2_train_in_df = split_1_train_df \
-    [split_1_train_df['date'] <= cutoff]
+temporal_in_df = cdnow_df \
+    [cdnow_df['date'] <= cutoff]
 
-split_2_train_out_df = split_1_train_df \
-    [split_1_train_df['date'] > cutoff]
+temporal_out_df = cdnow_df \
+    [cdnow_df['date'] > cutoff]
 
-split_2_test_in_df = split_1_test_df \
-    [split_1_test_df['date'] <= cutoff]
-
-split_2_test_out_df = split_1_test_df \
-    [split_1_test_df['date'] > cutoff]
 
 # 3.2 FEATURE ENGINEERING (RFM) ----
 #   - Most challenging part
@@ -135,14 +111,7 @@ split_2_test_out_df = split_1_test_df \
 
 # Make Targets from out data ----
 
-targets_train_df = split_2_train_out_df \
-    .drop('quantity', axis=1) \
-    .groupby('customer_id') \
-    .sum() \
-    .rename({'price': 'spend_90_total'}, axis = 1) \
-    .assign(spend_90_flag = 1)
-
-targets_test_df = split_2_test_out_df \
+targets_df = temporal_out_df \
     .drop('quantity', axis=1) \
     .groupby('customer_id') \
     .sum() \
@@ -151,39 +120,32 @@ targets_test_df = split_2_test_out_df \
 
 # Make Recency (Date) Features from in data ----
 
-max_date = split_2_train_in_df['date'].max()
+max_date = temporal_in_df['date'].max()
 
-recency_features_train_df = split_2_train_in_df \
+recency_features_df = temporal_in_df \
     [['customer_id', 'date']] \
     .groupby('customer_id') \
     .apply(
         lambda x: (x['date'].max() - max_date) / pd.to_timedelta(1, "day")
-    )
+    ) \
+    .to_frame() \
+    .set_axis(["recency"], axis=1)
 
-recency_features_test_df = split_2_test_in_df \
-    [['customer_id', 'date']] \
-    .groupby('customer_id') \
-    .apply(
-        lambda x: (x['date'].max() - max_date) / pd.to_timedelta(1, "day")
-    )
+recency_features_df
 
 # Make Frequency (Count) Features from in data ----
 
-frequency_features_train_df = split_2_train_in_df \
+frequency_features_df = temporal_in_df \
     [['customer_id', 'date']] \
     .groupby('customer_id') \
     .count() \
     .set_axis(['frequency'], axis=1)
 
-frequency_features_test_df = split_2_test_in_df \
-    [['customer_id', 'date']] \
-    .groupby('customer_id') \
-    .count() \
-    .set_axis(['frequency'], axis=1)
+frequency_features_df
 
 # Make Price (Monetary) Features from in data ----
 
-price_features_train_df = split_2_train_in_df \
+price_features_df = temporal_in_df \
     .groupby('customer_id') \
     .aggregate(
         {
@@ -192,13 +154,126 @@ price_features_train_df = split_2_train_in_df \
     ) \
     .set_axis(['price_sum', 'price_mean'], axis = 1)
 
-price_features_test_df = split_2_test_in_df \
-    .groupby('customer_id') \
-    .aggregate(
-        {
-            'price': ["sum", "mean"]
-        }
-    ) \
-    .set_axis(['price_sum', 'price_mean'], axis = 1)
+price_features_df
 
+# 3.3 COMBINE FEATURES ----
+
+features_df = pd.concat(
+    [recency_features_df, frequency_features_df, price_features_df], axis = 1
+) \
+    .merge(
+        targets_df, 
+        left_index  = True, 
+        right_index = True, 
+        how         = "left"
+    ) \
+    .fillna(0)
+
+# 4.0 MACHINE LEARNING -----
+
+from xgboost import XGBClassifier, XGBRegressor
+
+from sklearn.model_selection import cross_val_score, GridSearchCV
+
+X = features_df[['recency', 'frequency', 'price_sum', 'price_mean']]
+
+# 4.1 NEXT 90-DAY SPEND PREDICTION ----
+
+y_spend = features_df['spend_90_total']
+
+xgb_reg_spec = XGBRegressor(
+    objective="reg:squarederror",   
+    random_state=123
+)
+
+xgb_reg_model = GridSearchCV(
+    estimator=xgb_reg_spec, 
+    param_grid=dict(
+        learning_rate = [0.01, 0.1, 0.3, 0.5]
+    ),
+    scoring = 'neg_mean_absolute_error',
+    refit   = True,
+    cv      = 5
+)
+
+xgb_reg_model.fit(X, y_spend)
+
+xgb_reg_model.best_score_
+
+xgb_reg_model.best_params_
+
+xgb_reg_model.best_estimator_
+
+predictions_reg = xgb_reg_model.predict(X)
+
+
+# 4.2 NEXT 90-DAY SPEND PROBABILITY ----
+
+y_prob = features_df['spend_90_flag']
+
+xgb_clf_spec = XGBClassifier(
+    objective    = "binary:logistic",   
+    random_state = 123
+)
+
+xgb_clf_model = GridSearchCV(
+    estimator=xgb_clf_spec, 
+    param_grid=dict(
+        learning_rate = [0.01, 0.1, 0.3, 0.5]
+    ),
+    scoring = 'roc_auc',
+    refit   = True,
+    cv      = 5
+)
+
+xgb_clf_model.fit(X, y_prob)
+
+xgb_clf_model.best_score_
+
+xgb_clf_model.best_params_
+
+xgb_clf_model.best_estimator_
+
+predictions_clf = xgb_clf_model.predict_proba(X)
+
+# 5.0 SAVE WORK ----
+
+predictions_df = pd.concat(
+    [
+        pd.DataFrame(predictions_reg).set_axis(['pred_spend'], axis=1),
+        pd.DataFrame(predictions_clf)[[1]].set_axis(['pred_prob'], axis=1),
+        features_df.reset_index()
+    ], 
+    axis=1
+)
+
+predictions_df
+
+# 6.0 HOW CAN WE USE THIS INFORMATION ---- 
+
+# Which customers have the highest spend probability in next 90-days? 
+# Target for new products similar to what they have purchased in the past
+
+predictions_df \
+    .sort_values('pred_prob', ascending=False)
+
+
+
+# # 3.3 RANDOM SPLITTING (STAGE 2) ----
+# # Stage 2: Random Splitting by Customer ID ----
+
+# customer_ids = pd.Series(
+#     cdnow_df['customer_id'].unique()
+# )
+
+# ids_train = customer_ids \
+#     .sample(frac=0.8, random_state=123) \
+#     .sort_values()
+# ids_train
+
+# split_1_train_df = cdnow_df \
+#     [cdnow_df['customer_id'].isin(ids_train)]
+
+# split_1_test_df = cdnow_df \
+#     [~ cdnow_df['customer_id'].isin(ids_train)]
 
