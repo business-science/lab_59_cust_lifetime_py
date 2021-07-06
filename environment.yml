@@ -1,5 +1,5 @@
-# In terminal, run: conda env create -f 01_environment.yml
-# To update, run: conda env update -f 01_environment.yml
+# In terminal, run: conda env create -f environment.yml
+# To update, run: conda env update -f environment.yml
 name: lab_59_cust_lifetime_py
 channels:
   - anaconda
