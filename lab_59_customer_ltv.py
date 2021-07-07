@@ -249,31 +249,49 @@ predictions_df = pd.concat(
 
 predictions_df
 
+predictions_df.to_pickle("artifacts/predictions_df.pkl")
+
+
 # 6.0 HOW CAN WE USE THIS INFORMATION ---- 
 
-# Which customers have the highest spend probability in next 90-days? 
-# Target for new products similar to what they have purchased in the past
+# 6.1 Which customers have the highest spend probability in next 90-days? 
+#     - Target for new products similar to what they have purchased in the past
 
 predictions_df \
     .sort_values('pred_prob', ascending=False)
 
+# 6.2 Which customers have recently purchased but are unlikely to buy? 
+#    - Incentivize actions to increase probability
+#    - Provide discounts, encourage referring a friend, nurture by letting them know what's coming
+
+predictions_df \
+    [
+        predictions_df['recency'] > -90
+    ] \
+    [
+        predictions_df['pred_prob'] < 0.20
+    ] \
+    .sort_values('pred_prob', ascending=False)
 
 
-# # 3.3 RANDOM SPLITTING (STAGE 2) ----
-# # Stage 2: Random Splitting by Customer ID ----
+# 6.3 Missed opportunities: Big spenders that could be unlocked ----
+#    - Send bundle offers encouraging volume purchases
+#    - Focus on missed opportunities
 
-# customer_ids = pd.Series(
-#     cdnow_df['customer_id'].unique()
-# )
+predictions_df \
+    [
+        predictions_df['spend_90_total'] == 0.0
+    ] \
+    .sort_values('pred_spend', ascending=False) 
 
-# ids_train = customer_ids \
-#     .sample(frac=0.8, random_state=123) \
-#     .sort_values()
-# ids_train
+# 7.0 NEXT STEPS ----
+# - It's really exciting what you can do with Machine Learning.
+#   Very powerful. But you have to put in the work.
 
-# split_1_train_df = cdnow_df \
-#     [cdnow_df['customer_id'].isin(ids_train)]
-
-# split_1_test_df = cdnow_df \
-#     [~ cdnow_df['customer_id'].isin(ids_train)]
-
+# - Learning Data Wrangling, Modeling, and Visualization (101)
+# - Model Improvement (Coming Soon):
+#   - Algorithms (201-P)
+#   - AutoML (201-P)
+#   - Hyper Parameter Tuning (201-P)
+# - Forecasting: When will customers purchase? (TBD)
+# - Web Applications, API's & Production (202-P)
