@@ -38,6 +38,8 @@ cdnow_df = cdnow_raw_df \
     ) \
     .dropna()
 
+cdnow_df.info()
+
 # 2.0 COHORT ANALYSIS ----
 # - Only the customers that have joined at the specific business day
 
@@ -178,7 +180,7 @@ features_df = pd.concat(
 
 from xgboost import XGBClassifier, XGBRegressor
 
-from sklearn.model_selection import cross_val_score, GridSearchCV
+from sklearn.model_selection import GridSearchCV
 
 X = features_df[['recency', 'frequency', 'price_sum', 'price_mean']]
 
