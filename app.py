@@ -74,7 +74,7 @@ app.layout = html.Div(
                         html.H3("Welcome to the Customer Analytics Dashboard"),
                         html.Div(
                             id="intro",
-                            children="Explore clinic patient volume by time of day, waiting time, and care score. Click on the heatmap to visualize patient experience at different time points.",
+                            children="Explore Customers by Predicted Spend versus Actual Spend during the 90-day evaluation period.",
                         ),
                         html.Br(),
                         html.Hr(),
