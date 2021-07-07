@@ -48,4 +48,5 @@ dependencies:
       # Apps
       - streamlit==0.80.0
       - dash==1.20.0
+      - dash_bootstrap_components==0.12.2
 
