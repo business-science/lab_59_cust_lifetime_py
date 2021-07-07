@@ -8,8 +8,13 @@
 # LIBRARIES ----
 import pandas as pd
 import numpy as np
+import joblib 
 
+import plydata.cat_tools as cat
 import plotnine as pn
+
+from xgboost import XGBClassifier, XGBRegressor
+from sklearn.model_selection import GridSearchCV
 
 pn.options.dpi = 300
 
@@ -236,8 +241,57 @@ xgb_clf_model.best_estimator_
 
 predictions_clf = xgb_clf_model.predict_proba(X)
 
+# 4.3 FEATURE IMPORTANCE (GLOBAL) ----
+
+# Importance | Spend Amount Model
+imp_spend_amount_dict = xgb_reg_model \
+    .best_estimator_ \
+    .get_booster() \
+    .get_score(importance_type = 'gain') 
+
+imp_spend_amount_df = pd.DataFrame(
+    data  = {
+        'feature':list(imp_spend_amount_dict.keys()),
+        'value':list(imp_spend_amount_dict.values())
+    }
+) \
+    .assign(
+        feature = lambda x: cat.cat_reorder(x['feature'] , x['value'])
+    )
+
+pn.ggplot(
+    pn.aes('feature', 'value'),
+    data = imp_spend_amount_df
+) \
+    + pn.geom_col() \
+    + pn.coord_flip()
+
+# Importance | Spend Probability Model
+imp_spend_prob_dict = xgb_clf_model \
+    .best_estimator_ \
+    .get_booster() \
+    .get_score(importance_type = 'gain') 
+
+imp_spend_prob_df = pd.DataFrame(
+    data  = {
+        'feature':list(imp_spend_prob_dict.keys()),
+        'value':list(imp_spend_prob_dict.values())
+    }
+) \
+    .assign(
+        feature = lambda x: cat.cat_reorder(x['feature'] , x['value'])
+    )
+
+pn.ggplot(
+    pn.aes('feature', 'value'),
+    data = imp_spend_prob_df
+) \
+    + pn.geom_col() \
+    + pn.coord_flip() 
+
 # 5.0 SAVE WORK ----
 
+# Save Predictions
 predictions_df = pd.concat(
     [
         pd.DataFrame(predictions_reg).set_axis(['pred_spend'], axis=1),
@@ -250,6 +304,21 @@ predictions_df = pd.concat(
 predictions_df
 
 predictions_df.to_pickle("artifacts/predictions_df.pkl")
+
+pd.read_pickle('artifacts/predictions_df.pkl')
+
+# Save Importance
+imp_spend_amount_df.to_pickle("artifacts/imp_spend_amount_df.pkl")
+imp_spend_prob_df.to_pickle("artifacts/imp_spend_prob_df.pkl")
+
+pd.read_pickle("artifacts/imp_spend_amount_df.pkl")
+
+# Save Models
+joblib.dump(xgb_reg_model, 'artifacts/xgb_reg_model.pkl')
+joblib.dump(xgb_clf_model, 'artifacts/xgb_clf_model.pkl')
+
+model = joblib.load('artifacts/xgb_reg_model.pkl')
+model.predict(X)
 
 
 # 6.0 HOW CAN WE USE THIS INFORMATION ---- 
