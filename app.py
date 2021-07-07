@@ -52,7 +52,7 @@ navbar = dbc.Navbar(
                 align="center",
                 no_gutters=True,
             ),
-            href="https://plotly.com",
+            href="https://www.business-science.io/",
         ),
         dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
         dbc.Collapse(
@@ -66,12 +66,34 @@ navbar = dbc.Navbar(
 app.layout = html.Div(
     children = [
         navbar, 
-        dcc.Graph(id='graph-slider'),
-        dcc.Slider(
-            id    = 'spend-slider',
-            value = df['spend_actual_vs_pred'].max(),
-            max   = df['spend_actual_vs_pred'].max(),
-            min   = df['spend_actual_vs_pred'].min()
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        
+                        html.H3("Welcome to the Customer Analytics Dashboard"),
+                        html.Div(
+                            id="intro",
+                            children="Explore clinic patient volume by time of day, waiting time, and care score. Click on the heatmap to visualize patient experience at different time points.",
+                        ),
+                        html.Br(),
+                        html.Hr(),
+                        html.H5("Filter Customers by Spend"),
+                        dcc.Slider(
+                            id    = 'spend-slider', 
+                            value = df['spend_actual_vs_pred'].max(),
+                            max   = df['spend_actual_vs_pred'].max(),
+                            min   = df['spend_actual_vs_pred'].min()
+                        ),
+                    ],
+                    width = 3,
+                    style={'margin':'10px'}
+                ),
+                dbc.Col(
+                    dcc.Graph(id='graph-slider'),
+                    width = 8
+                )
+            ] 
         )
     ]
 )
