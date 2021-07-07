@@ -21,7 +21,10 @@ import pathlib
 
 # APP SETUP
 external_stylesheets = [dbc.themes.CYBORG]
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(
+    __name__, 
+    external_stylesheets=external_stylesheets
+)
 
 PLOT_BACKGROUND = 'rgba(0,0,0,0)'
 PLOT_FONT_COLOR = 'white'
@@ -40,13 +43,8 @@ df = predictions_df \
     )
 
 # LAYOUT
-# mark_max = df['spend_actual_vs_pred'].max()
-# mark_min = df['spend_actual_vs_pred'].min()
 
-# slider_marks = {
-
-# }
-
+# Slider Marks
 x = np.linspace(df['spend_actual_vs_pred'].min(), df['spend_actual_vs_pred'].max(), 10, dtype=int)
 x = x.round(0)
 
@@ -97,6 +95,8 @@ app.layout = html.Div(
                             min   = df['spend_actual_vs_pred'].min(), 
                             marks = {i: '$'+str(i) for i in range(x[0],x[-1]) if i % 300 == 0}
                         ),
+                        html.Br(),
+                        html.Button("Download Segmentation", id="btn"), dcc.Download(id="download")
                     ],
                     width = 3,
                     style={'margin':'10px'}
@@ -143,7 +143,20 @@ def update_figure(spend_delta_max):
     
     return fig
 
-# add callback for toggling the collapse on small screens
+# Download Button
+@app.callback(
+    Output("download", "data"), 
+    Input("btn", "n_clicks"), 
+    State('spend-slider', 'value'),
+    prevent_initial_call=True,
+)
+def func(n_clicks, spend_delta_max):
+    
+    df_filtered = df[df['spend_actual_vs_pred'] <= spend_delta_max]
+
+    return dcc.send_data_frame(df_filtered.to_csv, "customer_segmentation.csv")
+
+# Navbar
 @app.callback(
     Output("navbar-collapse", "is_open"),
     [Input("navbar-toggler", "n_clicks")],
