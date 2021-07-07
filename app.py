@@ -12,10 +12,11 @@ from dash.dependencies import Input, Output, State
 
 import dash_bootstrap_components as dbc
 
-
 import plotly.express as px
 
 import pandas as pd
+import numpy as np
+
 import pathlib
 
 # APP SETUP
@@ -24,7 +25,6 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 PLOT_BACKGROUND = 'rgba(0,0,0,0)'
 PLOT_FONT_COLOR = 'white'
-
 LOGO = "https://www.business-science.io/img/business-science-logo.png"
 
 # PATHS
@@ -40,6 +40,16 @@ df = predictions_df \
     )
 
 # LAYOUT
+# mark_max = df['spend_actual_vs_pred'].max()
+# mark_min = df['spend_actual_vs_pred'].min()
+
+# slider_marks = {
+
+# }
+
+x = np.linspace(df['spend_actual_vs_pred'].min(), df['spend_actual_vs_pred'].max(), 10, dtype=int)
+x = x.round(0)
+
 navbar = dbc.Navbar(
     [
         html.A(
@@ -78,12 +88,14 @@ app.layout = html.Div(
                         ),
                         html.Br(),
                         html.Hr(),
-                        html.H5("Filter Customers by Spend"),
+                        html.H5("Spend Actual vs Predicted"),
+                        html.P("Segment Customers that were predicted to spend but didn't. Then target these customers with targeted emails."),
                         dcc.Slider(
                             id    = 'spend-slider', 
                             value = df['spend_actual_vs_pred'].max(),
                             max   = df['spend_actual_vs_pred'].max(),
-                            min   = df['spend_actual_vs_pred'].min()
+                            min   = df['spend_actual_vs_pred'].min(), 
+                            marks = {i: '$'+str(i) for i in range(x[0],x[-1]) if i % 300 == 0}
                         ),
                     ],
                     width = 3,
