@@ -1,5 +1,5 @@
 {
     "python.pythonPath": "/Users/mdancho/opt/anaconda3/envs/lab_59_cust_lifetime_py/bin/python",
-    "jupyter.sendSelectionToInteractiveWindow": true,
     "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "jupyter.interactiveWindow.textEditor.executeSelection": true,
 }
